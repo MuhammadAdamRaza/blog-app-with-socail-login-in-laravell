@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Blog</title>
+    <title>{{ $siteName ?? 'My Blog' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -107,14 +107,61 @@
         .nav-links {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.45rem;
+        }
+
+        .nav-links .btn {
+            min-width: 0;
+            height: 40px;
+            padding: 0 0.8rem;
+            font-size: 0.82rem;
+        }
+
+        .nav-links a.is-active {
+            border-color: rgba(165, 180, 252, 0.75);
+            color: #fff;
+            background: rgba(99, 102, 241, 0.42);
+        }
+
+        .menu-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+            min-height: 44px;
+            padding: 0.55rem 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            border-radius: var(--radius-sm);
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .menu-toggle:hover,
+        .menu-toggle:focus-visible {
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .menu-toggle:focus-visible,
+        .nav-links a:focus-visible,
+        .nav-links button:focus-visible {
+            outline: 3px solid #a5b4fc;
+            outline-offset: 3px;
+        }
+
+        .menu-toggle-icon {
+            width: 1.15rem;
+            height: 1.15rem;
         }
 
         .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0.6rem 1.3rem;
+            min-width: 120px;
+            height: 44px;
+            padding: 0 15px;
             font-weight: 600;
             font-size: 0.875rem;
             border-radius: var(--radius-sm);
@@ -146,21 +193,28 @@
         }
 
         .btn-danger {
-            background-color: var(--danger-bg);
-            color: var(--danger);
-            border: 1px solid #fecaca;
+            background-color: var(--danger);
+            color: #ffffff;
+            border: 1px solid var(--danger);
         }
 
         .btn-danger:hover {
-            background-color: var(--danger);
+            background-color: #b91c1c;
+            border-color: #b91c1c;
             color: white;
         }
 
         .user-menu {
             display: flex;
             align-items: center;
-            gap: 0.85rem;
+            gap: 0.55rem;
+            padding: 0.25rem 0.35rem 0.25rem 0.6rem;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.07);
         }
+
+        .user-menu form .btn { min-width:0; height:40px; padding:0 .8rem; }
 
         .user-greeting {
             font-size: 0.875rem;
@@ -206,6 +260,22 @@
             background: var(--surface);
             border: 1px solid var(--border);
             animation: toastIn 0.35s ease forwards;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+
+        .toast.is-leaving {
+            opacity: 0;
+            transform: translateY(-8px);
+            pointer-events: none;
+        }
+
+        .toast-dismiss {
+            flex: 0 0 auto;
+            margin-left: auto;
+            padding: 0 0.2rem;
+            color: inherit;
+            font-size: 1.2rem;
+            line-height: 1;
         }
 
         @keyframes toastIn {
@@ -714,6 +784,56 @@
         }
 
         @media (max-width: 860px) {
+            .header-content {
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+
+            .menu-toggle {
+                display: inline-flex;
+                margin-left: auto;
+            }
+
+            .nav-links {
+                display: none;
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.4rem;
+                padding: 0.5rem 0 0.25rem;
+            }
+
+            .nav-links.is-open {
+                display: flex;
+            }
+
+            .nav-links > a {
+                width: 100%;
+                min-height: 44px;
+                justify-content: flex-start;
+            }
+
+            .user-menu {
+                width: 100%;
+                min-height: 48px;
+                align-items: center;
+                justify-content: flex-start;
+                gap: 0.7rem;
+                padding-top: 0.25rem;
+            }
+
+            .user-greeting {
+                display: inline;
+            }
+
+            .user-menu form {
+                margin-left: auto !important;
+            }
+
+            .user-menu form button {
+                min-height: 44px;
+            }
+
             .layout-grid {
                 grid-template-columns: 1fr;
                 gap: 2rem;
@@ -735,6 +855,15 @@
             }
         }
 
+        @media (min-width: 861px) and (max-width: 1060px) {
+            .header-content { flex-wrap: wrap; gap: 0.75rem; }
+            .menu-toggle { display: inline-flex; margin-left: auto; }
+            .nav-links { display: none; width: 100%; flex-direction: column; align-items: stretch; gap: 0.4rem; padding: 0.5rem 0 0.25rem; }
+            .nav-links.is-open { display: flex; }
+            .nav-links > a { width: 100%; min-height: 44px; justify-content: flex-start; }
+            .user-menu { width: 100%; min-height: 48px; }
+        }
+
         @media (max-width: 640px) {
             header {
                 padding: 0.85rem 0;
@@ -748,17 +877,9 @@
                 font-size: 1.25rem;
             }
 
-            .nav-links {
-                gap: 0.6rem;
-            }
-
             .btn {
                 padding: 0.5rem 1rem;
                 font-size: 0.825rem;
-            }
-
-            .user-greeting {
-                display: none;
             }
 
             main {
@@ -850,20 +971,14 @@
         }
 
         @media (max-width: 420px) {
-            .header-content {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.75rem;
+            .container {
+                padding-right: 1rem;
+                padding-left: 1rem;
             }
 
-            .nav-links {
-                width: 100%;
-                justify-content: space-between;
-            }
-
-            .user-menu {
-                width: 100%;
-                justify-content: space-between;
+            .logo {
+                max-width: calc(100% - 6.5rem);
+                overflow-wrap: anywhere;
             }
         }
     </style>
@@ -872,10 +987,51 @@
 
     <header>
         <div class="container header-content">
-            <a href="{{ route('home') }}" class="logo">My Blog</a>
+            <a href="{{ route('home') }}" class="logo">{{ $siteName ?? 'My Blog' }}</a>
 
-            <nav class="nav-links">
+            <button
+                type="button"
+                class="menu-toggle"
+                aria-expanded="false"
+                aria-controls="primary-navigation"
+                aria-label="Open navigation menu"
+            >
+                <svg class="menu-toggle-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <span>Menu</span>
+            </button>
+
+            <nav class="nav-links" id="primary-navigation" aria-label="Main navigation">
                 @auth
+                    @can('viewAny', \App\Models\Project::class)
+                        <a href="{{ route('projects.index') }}" class="btn btn-outline {{ request()->routeIs('projects.*') ? 'is-active' : '' }}">Projects</a>
+                    @endcan
+
+                    @can('viewAny', \App\Models\User::class)
+                        <a href="{{ route('users.index') }}" class="btn btn-outline {{ request()->routeIs('users.*') ? 'is-active' : '' }}">Users</a>
+                    @endcan
+
+                    @can('roles.manage')
+                        <a href="{{ route('roles.index') }}" class="btn btn-outline {{ request()->routeIs('roles.*') ? 'is-active' : '' }}">Roles</a>
+                    @endcan
+
+                    @can('permissions.manage')
+                        <a href="{{ route('permissions.index') }}" class="btn btn-outline {{ request()->routeIs('permissions.*') ? 'is-active' : '' }}">Permissions</a>
+                    @endcan
+
+                    @can('reports.view')
+                        <a href="{{ route('reports.index') }}" class="btn btn-outline {{ request()->routeIs('reports.*') ? 'is-active' : '' }}">Reports</a>
+                    @endcan
+
+                    @can('settings.manage')
+                        <a href="{{ route('settings.index') }}" class="btn btn-outline {{ request()->routeIs('settings.*') ? 'is-active' : '' }}">Settings</a>
+                    @endcan
+
+                    @can('viewAny', \App\Models\Post::class)
+                        <a href="{{ route('posts.index') }}" class="btn btn-outline {{ request()->routeIs('posts.*') ? 'is-active' : '' }}">Posts</a>
+                    @endcan
+
                     <div class="user-menu">
                         <span class="avatar">{{ substr($currentUserName ?? 'U', 0, 1) }}</span>
                         <span class="user-greeting">{{ $currentUserName }}</span>
@@ -894,8 +1050,9 @@
 
     <div class="toast-container">
         @if(session('status'))
-            <div class="toast success">
+            <div class="toast success" role="status" aria-live="polite" data-auto-dismiss>
                 <div>{{ session('status') }}</div>
+                <button type="button" class="toast-dismiss" aria-label="Dismiss notification">&times;</button>
             </div>
         @endif
 
@@ -966,8 +1123,9 @@
                                 <h3 class="post-title">{{ $post->title }}</h3>
                                 <div class="post-body">{{ $post->body }}</div>
 
-                                @if($currentUserId === $post->user_id)
+                                @canany(['update', 'delete'], $post)
                                     <div class="post-actions">
+                                        @can('update', $post)
                                         <details class="edit-toggle">
                                             <summary>Edit post</summary>
                                             <div class="edit-form-box">
@@ -986,14 +1144,17 @@
                                                 </form>
                                             </div>
                                         </details>
+                                        @endcan
 
+                                        @can('delete', $post)
                                         <form action="{{ route('posts.destroy', $post) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this post?');" style="margin:0;">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger" style="padding: 0.45rem 0.9rem; font-size: 0.825rem;">Delete</button>
                                         </form>
+                                        @endcan
                                     </div>
-                                @endif
+                                @endcanany
                             </article>
                         @empty
                             <div class="empty-state">
@@ -1005,8 +1166,9 @@
                     </div>
                 </section>
 
+                @can('create', \App\Models\Post::class)
                 <aside>
-                    <div class="sidebar-card">
+                    <div id="create-post" class="sidebar-card">
                         <h3 class="sidebar-title">Create an Article</h3>
                         <p class="sidebar-desc">Publish your thoughts directly to your blog.</p>
 
@@ -1024,6 +1186,7 @@
                         </form>
                     </div>
                 </aside>
+                @endcan
             </div>
         @else
             <section class="hero">
@@ -1056,9 +1219,46 @@
 
     <footer>
         <div class="container">
-            &copy; {{ date('Y') }} My Blog. All rights reserved.
+            &copy; {{ date('Y') }} {{ $siteName ?? 'My Blog' }}. All rights reserved.
         </div>
     </footer>
 
+    <script>
+        const menuToggle = document.querySelector('.menu-toggle');
+        const primaryNavigation = document.querySelector('#primary-navigation');
+
+        menuToggle?.addEventListener('click', () => {
+            const isOpen = menuToggle.getAttribute('aria-expanded') === 'true';
+            menuToggle.setAttribute('aria-expanded', String(!isOpen));
+            menuToggle.setAttribute('aria-label', isOpen ? 'Open navigation menu' : 'Close navigation menu');
+            primaryNavigation?.classList.toggle('is-open', !isOpen);
+        });
+
+        primaryNavigation?.addEventListener('click', (event) => {
+            if (event.target.closest('a')) {
+                menuToggle?.setAttribute('aria-expanded', 'false');
+                menuToggle?.setAttribute('aria-label', 'Open navigation menu');
+                primaryNavigation.classList.remove('is-open');
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && primaryNavigation?.classList.contains('is-open')) {
+                menuToggle?.setAttribute('aria-expanded', 'false');
+                menuToggle?.setAttribute('aria-label', 'Open navigation menu');
+                primaryNavigation.classList.remove('is-open');
+                menuToggle?.focus();
+            }
+        });
+
+        document.querySelectorAll('[data-auto-dismiss]').forEach((toast) => {
+            const dismiss = () => {
+                toast.classList.add('is-leaving');
+                window.setTimeout(() => toast.remove(), 400);
+            };
+            window.setTimeout(dismiss, 5000);
+            toast.querySelector('.toast-dismiss')?.addEventListener('click', dismiss);
+        });
+    </script>
 </body>
 </html>

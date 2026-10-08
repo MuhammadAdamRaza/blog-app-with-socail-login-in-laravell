@@ -57,3 +57,21 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Role and Permission System
+
+This app seeds the Super Admin, Admin, Manager, Editor, and User roles with their permissions. To create the initial Super Admin during setup, set these values in `.env` before seeding:
+
+```env
+SUPER_ADMIN_NAME="Super Admin"
+SUPER_ADMIN_EMAIL="admin@example.com"
+SUPER_ADMIN_PASSWORD="use-a-strong-unique-password"
+```
+
+Then run:
+
+```bash
+php artisan migrate --seed
+```
+
+Public registration creates users with the `User` role. Only a Super Admin can assign a different role or manage roles, permissions, and system settings.

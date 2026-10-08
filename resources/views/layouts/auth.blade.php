@@ -306,7 +306,9 @@
         .center-link { margin: 24px 0 0; color: var(--text-muted); font-size: 14px; text-align: center; }
 
         .notice, .error-list { margin: 0 0 20px; padding: 14px 16px; border-radius: 10px; font-size: 14px; line-height: 1.5; }
-        .notice { border: 1px solid #86efac; background: #f0fdf4; color: #166534; }
+        .notice { position: relative; padding-right: 42px; border: 1px solid #86efac; background: #f0fdf4; color: #166534; transition: opacity .35s ease, transform .35s ease; }
+        .notice.is-leaving { opacity: 0; transform: translateY(-6px); }
+        .notice-dismiss { position: absolute; top: 5px; right: 7px; width: 32px; height: 32px; border: 0; border-radius: 7px; color: inherit; background: transparent; font-size: 20px; cursor: pointer; }
         .error-list { padding-left: 36px; border: 1px solid #fca5a5; background: #fef2f2; color: #991b1b; }
 
         .page-bottom { margin: 24px 0 0; color: #94a3b8; font-size: 14px; text-align: center; font-weight: 500; }
@@ -352,7 +354,10 @@
                     <p class="auth-description">@yield('description')</p>
 
                     @if (session('status'))
-                        <div class="notice" role="status">{{ session('status') }}</div>
+                        <div class="notice" role="status" aria-live="polite" data-auto-dismiss>
+                            {{ session('status') }}
+                            <button type="button" class="notice-dismiss" aria-label="Dismiss notification">&times;</button>
+                        </div>
                     @endif
 
                     @if ($errors->any())
@@ -370,5 +375,15 @@
             </div>
         </div>
     </div>
+    <script>
+        document.querySelectorAll('[data-auto-dismiss]').forEach((notice) => {
+            const dismiss = () => {
+                notice.classList.add('is-leaving');
+                window.setTimeout(() => notice.remove(), 400);
+            };
+            window.setTimeout(dismiss, 5000);
+            notice.querySelector('.notice-dismiss')?.addEventListener('click', dismiss);
+        });
+    </script>
 </body>
 </html>

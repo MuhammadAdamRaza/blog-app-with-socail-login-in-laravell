@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use App\Models\Role;
 
 class UserController extends Controller
 {
@@ -42,6 +44,12 @@ class UserController extends Controller
     }
     public function register(Request $request)
     {
+        abort_if(
+            Setting::where('key', 'allow_registration')->value('value') === '0',
+            403,
+            'Public registration is disabled.'
+        );
+
         $request->merge([
             'email' => strtolower(trim((string) $request->input('email'))),
         ]);
@@ -55,6 +63,9 @@ class UserController extends Controller
         ]);
 
         $user = User::create($incomingFields);
+
+        $userRole = Role::where('slug', 'user')->firstOrFail();
+        $user->roles()->attach($userRole->id);
 
         Auth::login($user);
         $request->session()->regenerate();

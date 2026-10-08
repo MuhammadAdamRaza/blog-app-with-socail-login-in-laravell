@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -10,16 +11,24 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call(RolePermissionSeeder::class);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $superAdminEmail = env('SUPER_ADMIN_EMAIL');
+        $superAdminPassword = env('SUPER_ADMIN_PASSWORD');
+
+        if ($superAdminEmail && $superAdminPassword) {
+            $superAdmin = User::updateOrCreate(
+                ['email' => strtolower(trim($superAdminEmail))],
+                [
+                    'name' => env('SUPER_ADMIN_NAME', 'Super Admin'),
+                    'password' => $superAdminPassword,
+                ]
+            );
+
+            $superAdminRole = Role::where('slug', 'super-admin')->firstOrFail();
+            $superAdmin->roles()->sync([$superAdminRole->id]);
+        }
     }
 }
