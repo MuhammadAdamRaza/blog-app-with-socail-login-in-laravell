@@ -21,7 +21,7 @@
             <option value="completed" @selected($project->status === 'completed')>Completed</option>
         </select>
 
-        <button type="submit">Update status</button>
+        <button class="btn" type="submit">Update status</button>
     </form>
 @endcan
 
@@ -38,22 +38,24 @@
         </select>
         @error('user_id') <p class="form-error">{{ $message }}</p> @enderror
 
-        <button type="submit">Assign</button>
+        <button class="btn" type="submit">Assign</button>
     </form>
 @endcan
 
-@can('update', $project)
-    <a href="{{ route('projects.edit', $project) }}">Edit Project</a>
-@endcan
+<div class="action-row">
+    @can('update', $project)
+        <a class="btn" href="{{ route('projects.edit', $project) }}">Edit Project</a>
+    @endcan
 
-@can('delete', $project)
-    <form method="POST" action="{{ route('projects.destroy', $project) }}">
-        @csrf
-        @method('DELETE')
-        <button class="btn btn-danger" type="submit">Delete Project</button>
-    </form>
-@endcan
+    @can('delete', $project)
+        <form method="POST" action="{{ route('projects.destroy', $project) }}" data-confirm="Are you sure you want to delete this project?">
+            @csrf
+            @method('DELETE')
+            <button class="btn btn-danger" type="submit">Delete Project</button>
+        </form>
+    @endcan
 
-<a href="{{ route('projects.index') }}">Back to Projects</a>
+    <a class="btn" href="{{ route('projects.index') }}">Back to Projects</a>
+</div>
 </section>
 @endsection

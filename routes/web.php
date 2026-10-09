@@ -12,10 +12,12 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
 use App\Models\Post;
 use App\Models\Setting;
+use App\Models\User;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\SocialAuthController;
 
 Route::get('/', function () {
+    /** @var User|null $user */
     $user = Auth::user();
 
     if (! $user) {
@@ -42,6 +44,9 @@ Route::get('/', function () {
         'siteName' => $siteName,
     ]);
 })->name('home');
+
+Route::view('/products', 'products.api-manager')->name('products.manage');
+
 Route::get('/auth/google/redirect', [SocialAuthController::class, 'redirectToGoogle'])
     ->middleware('throttle:10,1')
     ->name('auth.google.redirect');

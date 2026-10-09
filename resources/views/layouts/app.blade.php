@@ -60,7 +60,7 @@
         input:focus,textarea:focus,select:focus { border-color:var(--primary); outline:3px solid #4f46e522; }
         input[type=checkbox],input[type=radio] { width:18px; height:18px; vertical-align:middle; accent-color:var(--primary); }
         .page-card form label:has(input[type=checkbox]) { display:flex; align-items:center; gap:9px; }
-        .btn,.page-card button[type=submit],.record-card button[type=submit],.page-card a.action-link { height:44px; min-width:120px; display:inline-flex; align-items:center; justify-content:center; width:fit-content; padding:0 15px; border:0; border-radius:9px; color:white; background:var(--primary); font-size:.9rem; font-weight:700; line-height:1; }
+        .btn,.page-card button[type=submit]:not(.btn-danger),.record-card button[type=submit]:not(.btn-danger),.page-card a.action-link { height:44px; min-width:120px; display:inline-flex; align-items:center; justify-content:center; width:fit-content; padding:0 15px; border:0; border-radius:9px; color:white; background:var(--primary); font-size:.9rem; font-weight:700; line-height:1; }
         .btn:hover,.page-card button[type=submit]:hover,.record-card button[type=submit]:hover,.page-card a.action-link:hover { color:#fff; background:var(--primary-hover); }
         .btn-secondary { border:1px solid var(--border)!important; color:var(--ink)!important; background:#fff!important; }
         .btn-danger,.page-card button.danger,.record-card button.btn-danger { color:#fff; background:var(--danger); }
@@ -92,6 +92,12 @@
         .app-footer-inner { padding-top:2.25rem; padding-bottom:2.25rem; }
         nav[role=navigation] { margin-top:20px; }
         nav[role=navigation] a,nav[role=navigation] span { display:inline-flex; min-width:38px; min-height:38px; align-items:center; justify-content:center; margin:2px; padding:6px 10px; border:1px solid var(--border); border-radius:8px; background:#fff; }
+        @media(min-width:901px) and (max-width:1150px) {
+            .app-header-inner { gap:10px; padding-left:16px; padding-right:16px; }
+            .app-nav { gap:4px; }
+            .app-nav a,.app-nav button { padding:6px 7px; font-size:.75rem; }
+            .app-nav .app-user { display:none; }
+        }
         @media(max-width:900px) {
             .app-header-inner { min-height:68px; flex-wrap:wrap; padding-top:10px; padding-bottom:10px; }
             .app-menu-toggle { display:inline-flex; margin-left:auto; }
@@ -121,6 +127,7 @@
                 <span aria-hidden="true">☰</span><span>Menu</span>
             </button>
             <nav class="app-nav" id="app-navigation" aria-label="Main navigation">
+                <a href="{{ route('products.manage') }}" @if(request()->routeIs('products.manage')) aria-current="page" @endif>Products</a>
                 @can('viewAny', \App\Models\Project::class)<a href="{{ route('projects.index') }}" @if(request()->routeIs('projects.*')) aria-current="page" @endif>Projects</a>@endcan
                 @can('viewAny', \App\Models\User::class)<a href="{{ route('users.index') }}" @if(request()->routeIs('users.*')) aria-current="page" @endif>Users</a>@endcan
                 @can('roles.manage')<a href="{{ route('roles.index') }}" @if(request()->routeIs('roles.*')) aria-current="page" @endif>Roles</a>@endcan
@@ -211,6 +218,8 @@
             confirmationModal.style.top = `${Math.max(8, Math.min(top, window.innerHeight - popupHeight - 8))}px`;
             confirmCancel.focus();
         };
+
+        window.showAppConfirmation = (trigger, message, action) => showConfirmation(trigger, message, action);
 
         const closeConfirmation = () => {
             confirmationModal.hidden = true;

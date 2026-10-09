@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <style>
         :root {
             --primary: #4f46e5;
@@ -737,12 +738,9 @@
             position: relative;
         }
 
-        .empty-icon-box::after {
-            content: '';
-            width: 20px;
-            height: 15px;
-            border: 2px solid var(--primary);
-            border-radius: 2px;
+        .empty-icon-box i {
+            color: var(--primary);
+            font-size: 1.25rem;
         }
 
         .empty-title {
@@ -981,13 +979,58 @@
                 overflow-wrap: anywhere;
             }
         }
+
+        /* Keep the dashboard header aligned with the management-page navbar. */
+        header { padding: 0; }
+        .header-content { min-height: 76px; gap: 18px; flex-wrap: nowrap; }
+        .logo { flex-shrink: 0; font-size: 1.25rem; }
+        .nav-links { justify-content: flex-end; gap: 6px; }
+        .nav-links .btn,
+        .user-menu form .btn {
+            min-width: 0;
+            min-height: 40px;
+            height: 40px;
+            padding: 7px 10px;
+            border-radius: 9px;
+            font-size: .825rem;
+            font-weight: 600;
+        }
+        .user-menu { flex-shrink: 0; gap: 8px; padding: 4px; border-radius: 12px; }
+        .user-menu form { margin: 0; }
+        .nav-links form { margin: 0; }
+        .nav-links form button { color: #fff; background: #ffffff0d; border: 1px solid #ffffff35; }
+        .nav-links form button:hover { color: #fff; background: #ffffff24; }
+        .app-user { padding: 0 4px; color: #fff; white-space: nowrap; }
+        .menu-toggle { display: none; }
+        @media (min-width: 901px) and (max-width: 1150px) {
+            .container { padding-left: 16px; padding-right: 16px; }
+            .header-content { gap: 10px; }
+            .nav-links { gap: 4px; }
+            .nav-links .btn, .user-menu form .btn { padding: 6px 7px; font-size: .75rem; }
+            .user-greeting { display: none; }
+            .app-user { display: none; }
+        }
+        @media (max-width: 900px) {
+            header { padding: 0; }
+            .header-content { min-height: 68px; flex-wrap: wrap; gap: 10px; padding-top: 10px; padding-bottom: 10px; }
+            .menu-toggle { display: inline-flex; margin-left: auto; }
+            .nav-links { display: none; width: 100%; align-items: stretch; flex-direction: column; gap: 6px; padding: 4px 0 8px; }
+            .nav-links.is-open { display: flex; }
+            .nav-links > a { width: 100%; min-height: 46px; justify-content: flex-start; }
+            .user-menu { width: 100%; min-height: 48px; }
+            .user-greeting { display: inline; }
+            .user-menu form { margin-left: auto; }
+            .user-menu form .btn { min-height: 44px; }
+            .nav-links form { width: 100%; }
+            .nav-links form button { width: 100%; min-height: 46px; justify-content: flex-start; }
+        }
     </style>
 </head>
 <body>
 
     <header>
         <div class="container header-content">
-            <a href="{{ route('home') }}" class="logo">{{ $siteName ?? 'My Blog' }}</a>
+            <a href="{{ route('home') }}" class="logo">My Blog</a>
 
             <button
                 type="button"
@@ -1004,6 +1047,7 @@
 
             <nav class="nav-links" id="primary-navigation" aria-label="Main navigation">
                 @auth
+                    <a href="{{ route('products.manage') }}" class="btn btn-outline {{ request()->routeIs('products.manage') ? 'is-active' : '' }}">Products</a>
                     @can('viewAny', \App\Models\Project::class)
                         <a href="{{ route('projects.index') }}" class="btn btn-outline {{ request()->routeIs('projects.*') ? 'is-active' : '' }}">Projects</a>
                     @endcan
@@ -1020,6 +1064,10 @@
                         <a href="{{ route('permissions.index') }}" class="btn btn-outline {{ request()->routeIs('permissions.*') ? 'is-active' : '' }}">Permissions</a>
                     @endcan
 
+                    @can('viewAny', \App\Models\Post::class)
+                        <a href="{{ route('posts.index') }}" class="btn btn-outline {{ request()->routeIs('posts.*') ? 'is-active' : '' }}">Posts</a>
+                    @endcan
+
                     @can('reports.view')
                         <a href="{{ route('reports.index') }}" class="btn btn-outline {{ request()->routeIs('reports.*') ? 'is-active' : '' }}">Reports</a>
                     @endcan
@@ -1028,18 +1076,11 @@
                         <a href="{{ route('settings.index') }}" class="btn btn-outline {{ request()->routeIs('settings.*') ? 'is-active' : '' }}">Settings</a>
                     @endcan
 
-                    @can('viewAny', \App\Models\Post::class)
-                        <a href="{{ route('posts.index') }}" class="btn btn-outline {{ request()->routeIs('posts.*') ? 'is-active' : '' }}">Posts</a>
-                    @endcan
-
-                    <div class="user-menu">
-                        <span class="avatar">{{ substr($currentUserName ?? 'U', 0, 1) }}</span>
-                        <span class="user-greeting">{{ $currentUserName }}</span>
-                        <form action="{{ route('logout') }}" method="POST" style="display:inline; margin:0;">
-                            @csrf
-                            <button type="submit" class="btn btn-outline" style="padding: 0.45rem 0.9rem;">Log out</button>
-                        </form>
-                    </div>
+                    <span class="app-user">{{ $currentUserName }}</span>
+                    <form action="{{ route('logout') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-outline">Log out</button>
+                    </form>
                 @else
                     <a href="{{ route('login') }}" class="btn btn-outline">Log in</a>
                     <a href="{{ route('register') }}" class="btn btn-primary">Get started</a>
@@ -1158,7 +1199,9 @@
                             </article>
                         @empty
                             <div class="empty-state">
-                                <div class="empty-icon-box"></div>
+                                <div class="empty-icon-box" aria-hidden="true">
+                                    <i class="fa-regular fa-file-lines"></i>
+                                </div>
                                 <div class="empty-title">No posts published yet</div>
                                 <p class="empty-desc">Create your first article using the form on the right to start your feed.</p>
                             </div>

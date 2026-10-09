@@ -16,6 +16,7 @@ class ProjectController extends Controller
     {
         Gate::authorize('viewAny', Project::class);
 
+        /** @var User $user */
         $user = $request->user();
 
         $projects = $user->hasRole('user')

@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Laravel Product API and Redis Cache Guide</title>
+<style>
+@page { size: A4; margin: 18mm 17mm 19mm; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #172033; font: 10pt/1.55 Arial, sans-serif; }
+h1,h2,h3 { color: #172554; line-height: 1.2; }
+h1 { font-size: 30pt; margin: 0 0 12pt; }
+h2 { font-size: 19pt; margin: 0 0 13pt; padding-bottom: 6pt; border-bottom: 2px solid #e0e7ff; page-break-after: avoid; }
+h3 { font-size: 12pt; margin: 18pt 0 7pt; page-break-after: avoid; }
+p { margin: 6pt 0 10pt; }
+ul,ol { padding-left: 20pt; }
+li { margin: 3pt 0; }
+a { color: #4338ca; text-decoration: none; }
+code { font: 8.3pt Consolas, monospace; color: #312e81; background: #f1f5f9; padding: 1pt 3pt; border-radius: 3pt; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 10pt 12pt; margin: 8pt 0 12pt; color: #e2e8f0; background: #111827; border-radius: 7pt; font: 7.5pt/1.45 Consolas, monospace; page-break-inside: avoid; }
+pre code { padding: 0; color: inherit; background: transparent; }
+table { width: 100%; border-collapse: collapse; margin: 9pt 0 14pt; font-size: 9pt; page-break-inside: avoid; }
+th,td { padding: 6pt 7pt; text-align: left; vertical-align: top; border: 1px solid #dbe3ef; }
+th { color: #1e1b4b; background: #eef2ff; }
+.cover { min-height: 245mm; display: flex; flex-direction: column; justify-content: center; page-break-after: always; color: white; background: linear-gradient(145deg,#111827,#312e81 70%,#4f46e5); padding: 28mm 22mm; border-radius: 14pt; }
+.cover .eyebrow { color: #c7d2fe; text-transform: uppercase; letter-spacing: 2px; font-size: 9pt; font-weight: bold; }
+.cover h1 { max-width: 150mm; color: white; font-size: 32pt; }
+.cover p { max-width: 140mm; color: #e0e7ff; font-size: 13pt; }
+.cover .meta { margin-top: 26pt; color: #cbd5e1; font-size: 9pt; }
+.callout { border-left: 4px solid #4f46e5; background: #eef2ff; padding: 9pt 11pt; margin: 10pt 0 14pt; page-break-inside: avoid; }
+.warning { border-left-color: #d97706; background: #fffbeb; }
+.good { border-left-color: #059669; background: #ecfdf5; }
+.section { page-break-before: always; }
+.no-break { page-break-inside: avoid; }
+.small { color: #64748b; font-size: 8.5pt; }
+.flow { padding: 10pt; border: 1px solid #c7d2fe; border-radius: 8pt; background: #f8faff; font-weight: bold; text-align: center; }
+.footer-note { margin-top: 16pt; padding-top: 8pt; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 8pt; }
+</style>
+</head>
+<body>
+<section class="cover">
+  <div class="eyebrow">Practical project handover</div>
+  <h1>Laravel Product Management API</h1>
+  <p>Laravel 12, PHP, MySQL, Redis cache, service classes, REST endpoints, and feature testing.</p>
+  <p class="meta">A plain-language technical guide for explaining, operating, and testing the implementation.</p>
+  <p class="meta">Project: practice-app · Prepared: 9 October 2026</p>
+</section>
+
+<h2>Contents</h2>
+<ol>
+  <li>What the application does</li><li>Architecture and request flow</li><li>Redis and Laravel configuration</li>
+  <li>Files and responsibilities</li><li>Service class and cache behavior</li><li>REST API reference</li>
+  <li>Cache invalidation</li><li>Testing through the browser</li><li>Testing the API and automated tests</li>
+  <li>Verifying Redis, TTL, hits, misses, and persistence</li><li>Common problems</li><li>Quick explanation for another developer</li>
+</ol>
+
+<section class="section">
+<h2>1. What the application does</h2>
+<p>This project has a Products page and a JSON API. The browser page at <code>/products</code> calls the API; the API reads and writes product records in MySQL. Laravel's cache layer stores frequently requested product data in Redis for ten minutes.</p>
+<div class="flow">Browser /products → Laravel API controller → ProductService → MySQL<br>                                                                     ↕ Redis cache</div>
+<p>The service class keeps product operations and caching out of the controller. The controller handles HTTP input, validation, and response codes. The service handles database work and cache rules.</p>
+<div class="callout good"><strong>Current project status:</strong> Redis is configured as Laravel's cache store, Memurai (Redis-compatible server) runs on Windows, the product API routes are registered, and the product feature tests exist.</div>
+<h3>Important access note</h3>
+<p>The current product API routes are public: they do not require a Sanctum token or login. This is convenient for local browser testing. For a real private catalog, add authentication and authorization middleware before deployment.</p>
+</section>
+
+<section class="section">
+<h2>2. Architecture and request flow</h2>
+<ol>
+  <li>The browser sends a request such as <code>GET /api/products</code>.</li>
+  <li><code>routes/api.php</code> routes it to <code>ProductController</code>.</li>
+  <li>The controller validates incoming fields when needed, then calls <code>ProductService</code>.</li>
+  <li>The service checks Redis. If a matching cached value exists, it returns that value. Otherwise it queries MySQL and stores the result in Redis.</li>
+  <li>The controller returns JSON with an HTTP status code.</li>
+</ol>
+<h3>Why have a service class?</h3>
+<p>A controller should be easy to read. If SQL queries, cache keys, expiry rules, and invalidation were all inside the controller, those rules would be duplicated across endpoints. <code>ProductService</code> centralizes those business rules so they can be changed and tested in one place.</p>
+<h3>What is a cache hit or miss?</h3>
+<table><tr><th>Term</th><th>Meaning</th><th>Example</th></tr>
+<tr><td>Cache miss</td><td>The requested key is not in Redis. Laravel gets data from MySQL and saves it in Redis.</td><td>First request for the active product list.</td></tr>
+<tr><td>Cache hit</td><td>The requested key is already in Redis. Laravel returns that cached value without running the product query again.</td><td>Refreshing the same product list shortly afterward.</td></tr>
+<tr><td>Expiration / TTL</td><td>Time to live: how many seconds remain before Redis expires a key.</td><td>A new cached product list starts near 600 seconds.</td></tr>
+</table>
+</section>
+
+<section class="section">
+<h2>3. Redis and Laravel configuration</h2>
+<h3>Windows Redis-compatible server</h3>
+<p>Memurai is the Redis-compatible Windows service used in this setup. Check that Windows reports it as running:</p>
+<pre><code>Get-Service *memurai*</code></pre>
+<p>Expected service status: <code>Running</code>. The CLI executable is installed at <code>C:\Program Files\Memurai\memurai-cli.exe</code>. It is not on this machine's PATH, so call it by full path:</p>
+<pre><code>&amp; "C:\Program Files\Memurai\memurai-cli.exe" ping
+# Expected: PONG</code></pre>
+<h3>Laravel environment values</h3>
+<p>In the project's <code>.env</code>, the cache-related values are:</p>
+<pre><code>CACHE_STORE=redis
+REDIS_CLIENT=predis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379</code></pre>
+<p><code>predis/predis</code> is the PHP Redis client package. Laravel connects to Memurai through Predis. Do not share the rest of <code>.env</code>: it can contain database passwords, mail credentials, and application keys.</p>
+<p>Laravel's <code>config/cache.php</code> selects the Redis cache connection. In <code>config/database.php</code>, the cache Redis connection uses database index <code>1</code> by default; the normal Redis connection uses database index <code>0</code>. That is why Redis CLI inspection uses <code>-n 1</code>.</p>
+<p>Laravel also adds a prefix to keys to avoid collisions with other apps. In this project observed keys begin with <code>laravel-database-laravel-cache-</code>. Do not hard-code that prefix in application code.</p>
+<h3>Clear cached configuration after changing .env</h3>
+<pre><code>php artisan config:clear</code></pre>
+<p>Restart the Laravel development server after configuration changes so the running PHP process uses the current settings.</p>
+</section>
+
+<section class="section">
+<h2>4. Project files and their responsibilities</h2>
+<table><tr><th>File</th><th>Purpose</th></tr>
+<tr><td><code>app/Models/Product.php</code></td><td>Product model and allowed mass-assignment fields.</td></tr>
+<tr><td><code>database/migrations/*create_products_table.php</code></td><td>Creates the MySQL products table.</td></tr>
+<tr><td><code>app/Services/ProductService.php</code></td><td>Lists, searches, retrieves, creates, updates, deletes, caches, and invalidates product data.</td></tr>
+<tr><td><code>app/Http/Controllers/Api/ProductController.php</code></td><td>Validates requests, calls the service, and returns JSON and HTTP status codes.</td></tr>
+<tr><td><code>routes/api.php</code></td><td>Declares product API URLs.</td></tr>
+<tr><td><code>bootstrap/app.php</code></td><td>Registers <code>routes/api.php</code> with the Laravel application.</td></tr>
+<tr><td><code>resources/views/products/api-manager.blade.php</code></td><td>Browser UI at <code>/products</code>; uses JavaScript fetch requests to the API.</td></tr>
+<tr><td><code>tests/Feature/ProductApiTest.php</code></td><td>Automated checks for API responses, validation, cache hit/miss, and invalidation.</td></tr>
+</table>
+<h3>Product table</h3>
+<p>The product record has: <code>id</code>, <code>name</code>, nullable <code>description</code>, decimal <code>price</code>, integer <code>stock</code> (default 0), boolean <code>is_active</code> (default true), and timestamps.</p>
+<p>The model's fillable list contains <code>name</code>, <code>description</code>, <code>price</code>, <code>stock</code>, and <code>is_active</code>. This allows the validated fields to be passed safely to <code>Product::create()</code> and <code>$product-&gt;update()</code>.</p>
+</section>
+
+<section class="section">
+<h2>5. ProductService and caching rules</h2>
+<p>The service uses Laravel's <code>Cache</code> facade with a <code>products</code> tag. <code>remember()</code> means: return an existing value if present; otherwise run the callback, save its result, and return it.</p>
+<table><tr><th>Data</th><th>Cache key</th><th>Lifetime</th></tr>
+<tr><td>Active product list</td><td><code>products:active:list</code></td><td>10 minutes</td></tr>
+<tr><td>Product details</td><td><code>products:{id}:details</code></td><td>10 minutes</td></tr>
+<tr><td>Search results</td><td><code>products:search:{sha1(normalized term)}</code></td><td>10 minutes</td></tr></table>
+<p>Search text is trimmed and lowercased before its SHA-1 digest is used. The digest keeps the key predictable and avoids putting arbitrary search text directly into a key.</p>
+<h3>Service code pattern</h3>
+<pre><code>return Cache::tags(['products'])->remember(
+    'products:active:list',
+    now()->addMinutes(10),
+    fn () =&gt; Product::where('is_active', true)-&gt;get()
+);</code></pre>
+<p>The individual lookup uses <code>Product::findOrFail($id)</code>, so an unknown ID becomes a 404 response. Search only includes active products and matches name or description.</p>
+<h3>Why cache tags?</h3>
+<p>A product write may affect the list, a detail page, and many search results. Laravel's product tag lets the service invalidate all of those related entries with one operation: <code>Cache::tags(['products'])->flush()</code>. This avoids having to know every search term that may already have been cached.</p>
+<div class="callout warning"><strong>Tag support matters:</strong> the Redis cache store supports tags. The array and file cache stores do not support this tagged-cache design. The feature test explicitly selects Redis for its cache operations.</div>
+</section>
+
+<section class="section">
+<h2>6. REST API reference</h2>
+<table><tr><th>Method</th><th>URL</th><th>Purpose</th><th>Success code</th></tr>
+<tr><td>GET</td><td><code>/api/products</code></td><td>List active products</td><td>200</td></tr>
+<tr><td>GET</td><td><code>/api/products/{id}</code></td><td>Get one product</td><td>200 (404 if missing)</td></tr>
+<tr><td>GET</td><td><code>/api/products/search?q=phone</code></td><td>Search active products by name/description</td><td>200</td></tr>
+<tr><td>POST</td><td><code>/api/products</code></td><td>Create a product</td><td>201</td></tr>
+<tr><td>PUT/PATCH</td><td><code>/api/products/{id}</code></td><td>Update a product</td><td>200 (404 if missing)</td></tr>
+<tr><td>DELETE</td><td><code>/api/products/{id}</code></td><td>Delete a product</td><td>200</td></tr></table>
+<h3>Product JSON fields</h3>
+<pre><code>{
+  "name": "Wireless headphones",
+  "description": "Over-ear headphones",
+  "price": 49.99,
+  "stock": 12,
+  "is_active": true
+}</code></pre>
+<p><code>name</code> and <code>price</code> are required when creating. Price must be numeric and at least 0. Stock must be an integer of at least 0. <code>is_active</code> must be boolean. Update accepts only the supplied fields. Search requires <code>q</code>, a string no longer than 100 characters.</p>
+<p>Laravel returns <code>422 Unprocessable Content</code> with validation errors for invalid JSON fields. Successful JSON responses use a <code>data</code> property, and create/update/delete responses also include a message.</p>
+</section>
+
+<section class="section">
+<h2>7. Cache invalidation</h2>
+<p>Creating, updating, or deleting a product changes data that could appear in cached lists, details, and searches. After a successful write, the service flushes the <code>products</code> tag.</p>
+<table><tr><th>Action</th><th>Expected cache behavior</th></tr>
+<tr><td>First list/search/detail GET</td><td>Miss: query MySQL, then store the result in Redis.</td></tr>
+<tr><td>Repeat same GET within 10 minutes</td><td>Hit: return cached data.</td></tr>
+<tr><td>Create product</td><td>Flush product tag; next list/search request sees the new product.</td></tr>
+<tr><td>Update product</td><td>Flush product tag; next detail/list/search request sees new fields and terms.</td></tr>
+<tr><td>Delete product</td><td>Flush product tag; next list/search excludes it, detail returns 404.</td></tr>
+<tr><td>No writes for 10 minutes</td><td>Redis expires each key; the next request queries MySQL and caches fresh data again.</td></tr></table>
+<p>The product tag metadata may remain briefly after an individual data key expires. The important detail key is the one ending in <code>:products:active:list</code>; inspect its TTL rather than assuming every tag bookkeeping key has the same TTL.</p>
+</section>
+
+<section class="section">
+<h2>8. Testing through the browser</h2>
+<ol>
+  <li>Start the Laravel server and open <code>http://localhost:8000/products</code>.</li>
+  <li>Add one product, for example <em>Cache Test Product</em>, price <code>19.99</code>, stock <code>4</code>.</li>
+  <li>Confirm it appears in the catalog. Refresh the page and confirm it remains.</li>
+  <li>Search for <em>Cache Test</em> and confirm the product appears.</li>
+  <li>Edit the product name to <em>Updated Cache Test Product</em>, save, and confirm the changed name appears.</li>
+  <li>Search the new name. This checks that a previously cached search does not show stale results.</li>
+  <li>Delete the product and confirm the styled confirmation dialog. Check that it disappears from the list.</li>
+</ol>
+<div class="callout"><strong>Browser limitation:</strong> the page looks the same whether a response came from MySQL or Redis. Browser testing verifies behavior and invalidation, but by itself it cannot prove a cache hit. Use Redis key inspection and feature tests for that proof.</div>
+<p>Browser DevTools → Network can show the requests to <code>/api/products</code> and their JSON responses. There is currently no custom response header that says “cache hit.”</p>
+</section>
+
+<section class="section">
+<h2>9. API and automated testing</h2>
+<h3>PowerShell manual API check</h3>
+<p>With <code>php artisan serve</code> running, use another PowerShell window:</p>
+<pre><code>$base = 'http://127.0.0.1:8000/api/products'
+$created = Invoke-RestMethod -Method Post -Uri $base `
+  -ContentType 'application/json' `
+  -Body (@{
+    name = 'Redis demo'
+    description = 'Cache test product'
+    price = 19.99
+    stock = 4
+    is_active = $true
+  } | ConvertTo-Json)
+$created
+$id = $created.data.id
+
+Invoke-RestMethod "$base"
+Invoke-RestMethod "$base/$id"
+Invoke-RestMethod "$base/search?q=Redis"
+
+Invoke-RestMethod -Method Put -Uri "$base/$id" `
+  -ContentType 'application/json' `
+  -Body (@{ name = 'Updated Redis demo' } | ConvertTo-Json)
+
+Invoke-RestMethod -Method Delete -Uri "$base/$id"</code></pre>
+<p>Expected: POST returns a new object (201), GET returns JSON (200), update shows the new name (200), and delete returns a success message (200). A missing detail after deletion should return 404.</p>
+<h3>Feature tests</h3>
+<pre><code>php artisan test --filter=ProductApiTest</code></pre>
+<p><code>ProductApiTest</code> uses an in-memory SQLite database so test product rows do not go into the regular MySQL database. It selects Redis as the cache store and clears the product tag around each test. The tests check active-only listing, search validation, create/update/delete, cache invalidation, and cache hit/miss events.</p>
+<p>For the full project test suite:</p>
+<pre><code>php artisan test</code></pre>
+</section>
+
+<section class="section">
+<h2>10. Verifying Redis, expiry, and persistence</h2>
+<h3>Check that a key is physically in Redis</h3>
+<p>Use Memurai CLI in PowerShell. The full executable path is required on this computer:</p>
+<pre><code>&amp; "C:\Program Files\Memurai\memurai-cli.exe" -n 1 --scan --pattern "*products*"</code></pre>
+<p>A successful check previously returned keys like these:</p>
+<pre><code>laravel-database-laravel-cache-tag:products:entries
+laravel-database-laravel-cache-6266bc2904f983980f02a3d69bd7b8985f76a5d0:products:active:list</code></pre>
+<p>The long prefix is generated from Laravel's app/cache prefixes. The part ending in <code>:products:active:list</code> is the cached active list. Redis stores Laravel-serialized data, so the value may not look like readable JSON.</p>
+<h3>Check its remaining expiry</h3>
+<pre><code>&amp; "C:\Program Files\Memurai\memurai-cli.exe" -n 1 TTL "PASTE_THE_FULL_ACTIVE_LIST_KEY_HERE"</code></pre>
+<p>The returned integer is remaining seconds. The observed value <code>486</code> meant 486 seconds remained from a 600-second (10-minute) lifetime. A TTL of <code>-2</code> means the key no longer exists; <code>-1</code> means it exists without an expiry, which would be unexpected for this key.</p>
+<h3>What “persistence” means here</h3>
+<p>This project verifies that cached values are stored in Redis and reused across separate HTTP requests while the Redis service is running. The 10-minute Redis TTL is verified through Redis CLI. Surviving a Redis/Memurai service restart is a separate disk-persistence setting (RDB/AOF) and is not established by Laravel's cache configuration alone. Do not claim restart survival unless Memurai's persistence settings are also configured and tested.</p>
+<h3>Proving a hit and a miss</h3>
+<p>The feature test fakes Laravel's <code>CacheMissed</code> and <code>CacheHit</code> events: the first request should miss and the repeated request should hit. The Redis CLI proves the key exists; the feature test is the direct hit/miss proof. No special badge is required on the frontend.</p>
+</section>
+
+<section class="section">
+<h2>11. Common problems</h2>
+<table><tr><th>Problem</th><th>Meaning / fix</th></tr>
+<tr><td><code>memurai-cli is not recognized</code></td><td>The executable is not in PATH. Use <code>&amp; "C:\Program Files\Memurai\memurai-cli.exe" ...</code>.</td></tr>
+<tr><td>Redis connection refused</td><td>Check <code>Get-Service *memurai*</code>; start Memurai, check host <code>127.0.0.1</code> and port <code>6379</code>, then clear Laravel config and restart the app.</td></tr>
+<tr><td>No product key appears</td><td>Visit <code>/products</code> or call <code>GET /api/products</code> first. A cache key is created when the cached operation is requested.</td></tr>
+<tr><td>TTL command returns <code>-2</code></td><td>The key expired, was invalidated by a product write, or the wrong Redis DB/prefix/key was used. Load the list again and scan again.</td></tr>
+<tr><td>TTL starts under 600</td><td>Some seconds may pass between loading the list and checking the key. A result such as 486 is normal if about 114 seconds passed.</td></tr>
+<tr><td>Class/method not found after code/config edits</td><td>Run <code>php artisan optimize:clear</code> if route/config/view caches are stale; restart the PHP server.</td></tr>
+<tr><td>Cache tags not supported</td><td>Ensure <code>CACHE_STORE=redis</code>; this service deliberately uses Redis tags.</td></tr></table>
+<div class="callout warning"><strong>Safe inspection:</strong> use <code>--scan</code> and <code>TTL</code>. Avoid <code>FLUSHALL</code> or broad key deletion; those commands can erase unrelated Redis data.</div>
+</section>
+
+<section class="section">
+<h2>12. Quick explanation for another developer</h2>
+<p>“The Products browser page calls our Laravel JSON API. The API controller validates requests and delegates product work to <code>ProductService</code>. The service caches the active list, product detail, and search results in Redis for ten minutes with meaningful keys. On a cache miss it reads MySQL and stores the result; on a hit it returns Redis data. Product create/update/delete flushes the shared products cache tag so old list, detail, and search results are not returned. The API tests use an in-memory SQLite database and verify CRUD, validation, invalidation, and cache hit/miss events. We verified Redis storage with Memurai CLI: it showed the active-list key and a TTL counting down from 600 seconds.”</p>
+<h3>Short glossary</h3>
+<table><tr><th>Term</th><th>Plain meaning</th></tr>
+<tr><td>REST API</td><td>URLs that use HTTP methods to read or change data and return JSON.</td></tr>
+<tr><td>Controller</td><td>Receives HTTP requests, validates input, calls app logic, returns a response.</td></tr>
+<tr><td>Service class</td><td>Reusable place for product business logic and cache rules.</td></tr>
+<tr><td>Redis</td><td>Fast in-memory key/value store used here for Laravel cache.</td></tr>
+<tr><td>Cache key</td><td>Name used to find one cached value in Redis.</td></tr>
+<tr><td>Invalidation</td><td>Removing old cached values after the underlying product data changes.</td></tr>
+<tr><td>TTL</td><td>Seconds remaining before a cached key expires.</td></tr>
+<tr><td>Feature test</td><td>Automated test that exercises an application request and checks its outcome.</td></tr></table>
+<p class="footer-note">This guide describes the current practice-app implementation. Check the actual files if the code changes after this handover.</p>
+</section>
+</body>
+</html>

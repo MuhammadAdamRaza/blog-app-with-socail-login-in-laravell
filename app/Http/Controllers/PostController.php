@@ -13,6 +13,7 @@ class PostController extends Controller
     {
         Gate::authorize('viewAny', Post::class);
 
+        /** @var User $user */
         $user = $request->user();
 
         $posts = $user->hasRole('user')
