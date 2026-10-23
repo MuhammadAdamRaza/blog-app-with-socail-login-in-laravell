@@ -1,77 +1,183 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Blog App with Social Login (Laravel)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Laravel 12 blog and admin application with social sign-in (Google, GitHub, LinkedIn, and Facebook). It includes role-based permissions, post management, project tracking, user administration, reports, site settings, and a Product REST API with Redis caching.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**Authentication**
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Email and password registration and login
+- Social login with Google, GitHub, LinkedIn, and Facebook through Laravel Socialite
+- Forgot-password and reset-password emails
+- New public registrations get the `User` role
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+**Roles and permissions**
 
-## Learning Laravel
+- Seeded roles: Super Admin, Admin, Manager, Editor, and User
+- Permissions are checked by the `permission` middleware on each route
+- Super Admin manages roles, permissions, and system settings
+- Policies control access to posts, projects, and users
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+**Posts**
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Create, edit, and delete posts
+- Assign posts to users
+- Dashboard shows all posts to Super Admin and Editor, and assigned posts to User
 
-## Laravel Sponsors
+**Projects**
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- Create, view, edit, and delete projects
+- Assign users to projects
+- Update project status (permission-controlled)
 
-### Premium Partners
+**Users**
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+- Create, edit, and assign roles to users
+- Soft-delete users, view trashed users, restore them, or permanently delete them
 
-## Contributing
+**Reports and settings**
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- Reports page (requires `reports.view`)
+- Site settings, including the site name shown on the home page (requires `settings.manage`)
 
-## Code of Conduct
+**Product API**
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- `GET /api/products` lists active products, cached in Redis or the configured cache store
+- `GET /api/products/search?q=...` searches active products
+- Full resource routes for create, show, update, and delete, with cache invalidation
+- Page at `/products` for managing products through the API
 
-## Security Vulnerabilities
+**Background jobs**
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- A demo queued job (`RedisQueueDemoJob`) logs a message. It shows Redis-backed queues.
 
-## License
+## Tech Stack
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- PHP 8.2 or newer and Laravel 12
+- Laravel Socialite and `socialiteproviders/linkedin`
+- Laravel Sanctum for API authentication
+- Predis for Redis
+- Blade views with Vite 7 and Tailwind CSS 4
+- Axios for frontend API calls
+- PHPUnit for tests
 
-## Role and Permission System
+## Project Structure
 
-This app seeds the Super Admin, Admin, Manager, Editor, and User roles with their permissions. To create the initial Super Admin during setup, set these values in `.env` before seeding:
-
-```env
-SUPER_ADMIN_NAME="Super Admin"
-SUPER_ADMIN_EMAIL="admin@example.com"
-SUPER_ADMIN_PASSWORD="use-a-strong-unique-password"
+```
+├── app/
+│   ├── Http/Controllers/       # Posts, projects, users, roles, permissions, reports, settings, social auth, password reset
+│   ├── Http/Controllers/Api/   # Product API
+│   ├── Http/Middleware/        # CheckPermission
+│   ├── Models/                 # User, Post, Project, Role, Permission, Product, Setting, SocialAccount
+│   ├── Policies/               # Post, Project, User
+│   ├── Services/               # ProductService
+│   └── Jobs/                   # RedisQueueDemoJob
+├── config/                     # services.php holds OAuth provider settings
+├── database/
+│   ├── migrations/
+│   └── seeders/                # RolePermissionSeeder, DatabaseSeeder
+├── resources/
+│   ├── views/                  # Blade templates for every module
+│   └── js/, css/               # Frontend entry points
+├── routes/
+│   ├── web.php                 # Web routes and permission-protected pages
+│   └── api.php                 # Product and Sanctum routes
+├── docs/Product_API_Redis_Guide.pdf
+└── tests/Feature/ProductApiTest.php
 ```
 
-Then run:
+## Getting Started
+
+### Prerequisites
+
+- PHP 8.2 or newer with the usual Laravel extensions
+- Composer
+- Node.js with npm
+- A database (MySQL, PostgreSQL, or SQLite)
+- Redis, if you use Redis for cache or queues
+
+### 1. Install
+
+```bash
+git clone <repository-url>
+cd blog-app-with-socail-login-in-laravell-main
+cp .env.example .env
+composer install
+php artisan key:generate
+npm install
+```
+
+Or run the bundled setup script, which covers the steps above and the migration:
+
+```bash
+composer run setup
+```
+
+### 2. Configure `.env`
+
+Set the database and mail settings, then add the OAuth credentials:
+
+```env
+APP_URL=http://localhost:8000
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GITHUB_REDIRECT_URI=http://localhost:8000/auth/github/callback
+
+LINKEDIN_CLIENT_ID=
+LINKEDIN_CLIENT_SECRET=
+LINKEDIN_REDIRECT_URI=http://localhost:8000/auth/linkedin/callback
+
+FACEBOOK_CLIENT_ID=
+FACEBOOK_CLIENT_SECRET=
+FACEBOOK_REDIRECT_URI=http://localhost:8000/auth/facebook/callback
+
+SUPER_ADMIN_NAME="Super Admin"
+SUPER_ADMIN_EMAIL=admin@example.com
+SUPER_ADMIN_PASSWORD=use-a-strong-unique-password
+```
+
+Each redirect URI must also be added to the matching OAuth app in the provider's developer console.
+
+### 3. Migrate and seed
 
 ```bash
 php artisan migrate --seed
 ```
 
-Public registration creates users with the `User` role. Only a Super Admin can assign a different role or manage roles, permissions, and system settings.
+This creates the tables, roles, permissions, and the Super Admin account.
+
+### 4. Run
+
+```bash
+php artisan serve
+npm run dev
+```
+
+Open http://localhost:8000.
+
+Or start the full development environment (server, queue, logs, and Vite) with:
+
+```bash
+composer run dev
+```
+
+## Testing
+
+```bash
+php artisan test
+```
+
+The Product API tests cover listing and caching, search, create, update, and delete.
+
+## Notes Before Production
+
+- Set `APP_DEBUG=false` and use a strong `APP_KEY`.
+- Use a production database and mail service.
+- Keep OAuth secrets and the Super Admin password out of the repository.
+- Run `npm run build` before deploying so the Vite assets are available.
+- Keep the `.env` file out of version control. The `.gitignore` already excludes it.
